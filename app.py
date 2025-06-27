@@ -30,8 +30,20 @@ def enviar_enlace():
 
     return jsonify({'status': 'ok'})
 
-# 🔧 Adaptación para Render: usa 0.0.0.0 y puerto del entorno
+@app.route('/revisar')
+def revisar():
+    fecha = datetime.now().strftime('%Y-%m-%d')
+    filename = f"data/{fecha}.csv"
+    datos = []
+
+    if os.path.exists(filename):
+        with open(filename, newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader, None)  # saltar cabecera
+            for row in reader:
+                datos.append(row)
+    return render_template('revisar.html', datos=datos)
+
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
