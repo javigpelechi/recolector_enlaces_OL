@@ -1,14 +1,30 @@
 from flask import Flask, request, jsonify, render_template
-import csv
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 
 app = Flask(__name__)
 
+# Configuración de la base de datos PostgreSQL desde variable de entorno
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Modelo de datos
+class Enlace(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.String(10))   # YYYY-MM-DD
+    hora = db.Column(db.String(8))     # HH:MM:SS
+    nombre = db.Column(db.String(50))
+    enlace = db.Column(db.String(500))
+
+# Ruta principal: formulario
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# API para guardar enlaces
 @app.route('/enviar', methods=['POST'])
 def enviar_enlace():
     data = request.json
@@ -17,32 +33,25 @@ def enviar_enlace():
     fecha = datetime.now().strftime('%Y-%m-%d')
     hora = datetime.now().strftime('%H:%M:%S')
 
-    os.makedirs('data', exist_ok=True)
-    filename = f"data/{fecha}.csv"
-    file_exists = os.path.isfile(filename)
-
-    with open(filename, 'a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(['fecha', 'hora', 'nombre', 'enlace'])
-        for enlace in enlaces:
-            writer.writerow([fecha, hora, nombre, enlace])
+    for url in enlaces:
+        nuevo = Enlace(fecha=fecha, hora=hora, nombre=nombre, enlace=url)
+        db.session.add(nuevo)
+    db.session.commit()
 
     return jsonify({'status': 'ok'})
 
+# Mostrar enlaces del día actual
 @app.route('/revisar')
 def revisar():
-    fecha = datetime.now().strftime('%Y-%m-%d')
-    filename = f"data/{fecha}.csv"
-    datos = []
+    fecha_actual = datetime.now().strftime('%Y-%m-%d')
+    enlaces = Enlace.query.filter_by(fecha=fecha_actual).all()
+    return render_template('revisar.html', datos=enlaces)
 
-    if os.path.exists(filename):
-        with open(filename, newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            next(reader, None)  # saltar cabecera
-            for row in reader:
-                datos.append(row)
-    return render_template('revisar.html', datos=datos)
+# Inicializar la base de datos si no existe (solo en local)
+@app.cli.command("init-db")
+def init_db():
+    db.create_all()
+    print("Base de datos creada correctamente.")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

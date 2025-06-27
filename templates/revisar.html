@@ -21,18 +21,18 @@
         </tr>
       </thead>
       <tbody>
-        {% for fila in datos %}
+        {% for enlace in datos %}
           <tr>
-            <td>{{ fila[0] }}</td>
-            <td>{{ fila[1] }}</td>
-            <td>{{ fila[2] }}</td>
-            <td><a href="{{ fila[3] }}" target="_blank">{{ fila[3] }}</a></td>
+            <td>{{ enlace.fecha }}</td>
+            <td>{{ enlace.hora }}</td>
+            <td>{{ enlace.nombre }}</td>
+            <td><a href="{{ enlace.enlace }}" target="_blank">{{ enlace.enlace }}</a></td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <p>No hay enlaces registrados aún hoy.</p>
+    <p>No hay enlaces aún para hoy.</p>
   {% endif %}
 </body>
 </html>
