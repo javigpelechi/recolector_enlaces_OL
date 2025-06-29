@@ -1,129 +1,78 @@
-import os, io, random
-from datetime import datetime, date
-from flask import (
-    Flask, request, render_template, redirect, url_for, send_file
-)
+from flask import Flask, render_template, request, redirect, send_file
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 import pandas as pd
+import os
+from io import BytesIO
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("SQLALCHEMY_DATABASE_URI")
 db = SQLAlchemy(app)
 
-# --- Modelos ---
-class Member(db.Model):
-    id        = db.Column(db.Integer,   primary_key=True)
-    nombre    = db.Column(db.String(50), nullable=False, unique=True)
-    team      = db.Column(db.String(1),  nullable=False)  # A o B
-    horario_LJ= db.Column(db.String(20), nullable=False)  # Lunes-Jueves
-    horario_V = db.Column(db.String(20), nullable=False)  # Viernes
-
 class Enlace(db.Model):
-    id      = db.Column(db.Integer, primary_key=True)
-    member_id = db.Column(db.Integer, db.ForeignKey('member.id'))
-    nombre  = db.Column(db.String(50), nullable=False)
-    enlace  = db.Column(db.String(500), nullable=False)
-    fecha   = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD
-    hora    = db.Column(db.String(5),  nullable=False)  # HH:MM
+    id = db.Column(db.Integer, primary_key=True)
+    enlace = db.Column(db.String, nullable=False)
+    fecha = db.Column(db.String, nullable=False)
+    autor = db.Column(db.String, nullable=False)
 
-def init_db():
-    with app.app_context():
-        db.create_all()
+class Miembro(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String, nullable=False)
+    equipo = db.Column(db.String, nullable=False)
+    horario_lj = db.Column(db.String, nullable=False)
+    horario_v = db.Column(db.String, nullable=False)
 
-# --- Rutas de gestión de miembros ---
-@app.route('/miembros', methods=['GET'])
-def miembros():
-    todos = Member.query.order_by(Member.nombre).all()
-    return render_template('miembros.html', miembros=todos)
+with app.app_context():
+    db.create_all()
 
-@app.route('/miembros/add', methods=['POST'])
-def miembros_add():
-    nombre = request.form['nombre']
-    team = request.form['team']
-    lj = request.form['horario_LJ']
-    v = request.form['horario_V']
-    db.session.add(Member(nombre=nombre, team=team,
-                          horario_LJ=lj, horario_V=v))
-    db.session.commit()
-    return redirect(url_for('miembros'))
-
-@app.route('/miembros/edit/<int:id>', methods=['POST'])
-def miembros_edit(id):
-    m = Member.query.get_or_404(id)
-    m.team = request.form['team']
-    m.horario_LJ = request.form['horario_LJ']
-    m.horario_V = request.form['horario_V']
-    db.session.commit()
-    return redirect(url_for('miembros'))
-
-@app.route('/miembros/delete/<int:id>', methods=['POST'])
-def miembros_delete(id):
-    Member.query.filter_by(id=id).delete()
-    db.session.commit()
-    return redirect(url_for('miembros'))
-
-# --- Rutas de envío y consulta ---
 @app.route('/')
-def index():
-    hoy = date.today().strftime("%Y-%m-%d")
-    nombres = [m.nombre for m in Member.query.order_by(Member.nombre)]
-    return render_template('index.html', hoy=hoy, nombres=nombres)
+def inicio():
+    return render_template("inicio.html")
 
-@app.route('/enviar', methods=['POST'])
+@app.route('/enviar', methods=["GET", "POST"])
 def enviar():
-    fecha  = request.form["fecha"]
-    nombre = request.form["nombre"]
-    hora   = datetime.now().strftime("%H:%M")
-    texto  = request.form.get("enlaces","")
-    enlaces = [e.strip() for e in texto.split('\n') if e.strip()]
-    for url in enlaces:
-        db.session.add(Enlace(nombre=nombre, enlace=url,
-                              fecha=fecha, hora=hora))
-    db.session.commit()
-    return redirect(url_for("index"))
+    miembros = Miembro.query.all()
+    if request.method == "POST":
+        fecha = request.form["fecha"]
+        autor = request.form["autor"]
+        texto = request.form["enlaces"]
+        enlaces = [line.strip() for line in texto.strip().splitlines() if line.strip()]
+        for enlace in enlaces:
+            if not Enlace.query.filter_by(enlace=enlace, fecha=fecha).first():
+                nuevo = Enlace(enlace=enlace, fecha=fecha, autor=autor)
+                db.session.add(nuevo)
+        db.session.commit()
+        return redirect("/basedatos")
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+    return render_template("enviar.html", fecha=fecha_hoy, miembros=miembros)
 
-@app.route('/basedatos')
+@app.route('/basedatos', methods=["GET", "POST"])
 def basedatos():
-    fecha = request.args.get("fecha") or date.today().strftime("%Y-%m-%d")
-    datos = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora).all()
-    return render_template('basedatos.html', datos=datos, fecha=fecha)
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+    fecha_filtrada = request.form.get("fecha", fecha_hoy)
+    datos = Enlace.query.filter_by(fecha=fecha_filtrada).all()
+    return render_template("basedatos.html", datos=datos, fecha=fecha_filtrada)
 
-# --- Clipping ---
-@app.route('/clipping')
-def clipping():
-    fecha = request.args.get("fecha") or date.today().strftime("%Y-%m-%d")
-    enlaces = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora).all()
-    random.shuffle(enlaces)
-    # repartir en 3 grupos de 4
-    grupos = [enlaces[i*4:(i+1)*4] for i in range(3)]
-    # calcular identificadores y horarios
-    is_viernes = datetime.strptime(fecha, "%Y-%m-%d").weekday() == 4
-    miembros = {m.nombre: m for m in Member.query.all()}
-    salida = []
-    for gi, grupo in enumerate(grupos, start=1):
-        grp = []
-        for idx, enlace in enumerate(grupo, start=1):
-            # ID: DD_MM_YY_NN
-            dd, mm, yyyy = fecha.split('-')
-            ident = f"{dd}_{mm}_{yyyy[2:]}_{idx:02d}"
-            h = miembros[enlace.nombre].horario_V if is_viernes else miembros[enlace.nombre].horario_LJ
-            grp.append({
-                'nombre': enlace.nombre,
-                'horario': h,
-                'id': ident,
-                'url': enlace.enlace
-            })
-        salida.append(grp)
-    return render_template('clipping.html',
-                           grupos=salida, fecha=fecha,
-                           is_viernes=is_viernes)
+@app.route('/descargar_filtrados', methods=["POST"])
+def descargar_filtrados():
+    fecha = request.form["fecha"]
+    datos = Enlace.query.filter_by(fecha=fecha).all()
+    df = pd.DataFrame([{"Fecha": d.fecha, "Autor": d.autor, "Enlace": d.enlace} for d in datos])
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    return send_file(output, download_name=f"enlaces_{fecha}.xlsx", as_attachment=True)
 
-# --- Helpers de descarga y duplicados (si quieres mantenerlos) ---
-# ...
+@app.route('/descargar_todo')
+def descargar_todo():
+    datos = Enlace.query.all()
+    df = pd.DataFrame([{"Fecha": d.fecha, "Autor": d.autor, "Enlace": d.enlace} for d in datos])
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+    return send_file(output, download_name="enlaces_completos.xlsx", as_attachment=True)
 
-if __name__ == "__main__":
-    init_db()
-    app.run(host="0.0.0.0",
-            port=int(os.environ.get("PORT", 10000)),
-            debug=True)
+# Rutas adicionales como /clipping y /equipo vendrán luego
+
+if __name__ == '__main__':
+    app.run(debug=True)

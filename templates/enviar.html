@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><title>Enviar enlaces</title></head>
+<body>
+    <h2>Enviar enlaces</h2>
+    <form method="POST">
+        Fecha: <input type="date" name="fecha" value="{{ fecha }}"><br>
+        Autor:
+        <select name="autor">
+            {% for miembro in miembros %}
+                <option value="{{ miembro.nombre }}">{{ miembro.nombre }}</option>
+            {% endfor %}
+        </select><br>
+        <textarea name="enlaces" rows="10" cols="80"></textarea><br>
+        <button type="submit">Enviar</button>
+    </form>
+    <br>
+    <a href="/">Volver al inicio</a>
+</body>
+</html>
