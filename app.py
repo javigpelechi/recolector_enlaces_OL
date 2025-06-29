@@ -1,145 +1,142 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+from flask import Flask, render_template, request, redirect, send_file, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-import os
 import pandas as pd
+import io
 import random
+import os
 
 app = Flask(__name__)
-app.secret_key = 'clave_secreta'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///enlaces.db')
+app.secret_key = 'tu_clave_secreta'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///enlaces.db'
 db = SQLAlchemy(app)
 
-class Enlace(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.String(20))
-    remitente = db.Column(db.String(50))
-    enlace = db.Column(db.String(500))
-    identificador = db.Column(db.String(50))
+from models import Enlace, Miembro
 
-class Miembro(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), unique=True)
-    horario_lj = db.Column(db.String(50))
-    horario_v = db.Column(db.String(50))
-    equipo = db.Column(db.String(1))
-
-with app.app_context():
+@app.before_first_request
+def crear_tablas():
     db.create_all()
+    if not Miembro.query.first():
+        miembros_iniciales = [
+            Miembro(nombre="Alicia", equipo="A", horario_lj="11:30 - 13:30", horario_v="11:30 - 13:30"),
+            Miembro(nombre="Carmen", equipo="A", horario_lj="13:30 - 15:30", horario_v="13:30 - 15:30"),
+            Miembro(nombre="Ceci", equipo="A", horario_lj="15:30 - 17:30", horario_v="15:30 - 17:30"),
+            Miembro(nombre="Alvaro", equipo="A", horario_lj="17:30 - 19:30", horario_v="13:30 - 15:30"),
+            Miembro(nombre="Kiko", equipo="A", horario_lj="11:30 - 13:30", horario_v="11:30 - 13:30"),
+            Miembro(nombre="Iván", equipo="A", horario_lj="13:30 - 15:30", horario_v="13:30 - 15:30"),
+            Miembro(nombre="Nico", equipo="B", horario_lj="15:30 - 17:30", horario_v="15:30 - 17:30"),
+            Miembro(nombre="Javier", equipo="B", horario_lj="17:30 - 19:30", horario_v="15:30 - 17:30"),
+            Miembro(nombre="Lucía", equipo="B", horario_lj="11:30 - 13:30", horario_v="11:30 - 13:30"),
+            Miembro(nombre="Iñigo", equipo="B", horario_lj="13:30 - 15:30", horario_v="13:30 - 15:30"),
+            Miembro(nombre="Manolo", equipo="B", horario_lj="15:30 - 17:30", horario_v="15:30 - 17:30"),
+            Miembro(nombre="Raquel", equipo="B", horario_lj="17:30 - 19:30", horario_v="11:30 - 13:30"),
+        ]
+        db.session.add_all(miembros_iniciales)
+        db.session.commit()
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def home():
+    return render_template('home.html')
 
 @app.route('/enviar', methods=['GET', 'POST'])
 def enviar():
-    if request.method == 'POST':
-        fecha = request.form['fecha']
-        remitente = request.form['remitente']
-        texto = request.form['texto']
-        enlaces = list(set([line.strip() for line in texto.splitlines() if line.strip()]))
-        for i, enlace in enumerate(enlaces, start=1):
-            identificador = f"{fecha.replace('-', '_')}_{i:02d}"
-            nuevo_enlace = Enlace(fecha=fecha, remitente=remitente, enlace=enlace, identificador=identificador)
-            db.session.add(nuevo_enlace)
-        db.session.commit()
-        return redirect(url_for('basedatos'))
+    miembros = Miembro.query.all()
     hoy = datetime.today().strftime('%Y-%m-%d')
-    miembros = Miembro.query.order_by(Miembro.nombre).all()
-    return render_template('enviar.html', hoy=hoy, miembros=miembros)
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        fecha = request.form['fecha']
+        enlaces = request.form['enlaces'].strip().splitlines()
+        for idx, enlace in enumerate(enlaces):
+            nuevo = Enlace(nombre=nombre, fecha=fecha, enlace=enlace.strip())
+            db.session.add(nuevo)
+        db.session.commit()
+        return redirect('/basedatos')
+    return render_template('enviar.html', miembros=miembros, hoy=hoy)
 
 @app.route('/basedatos', methods=['GET', 'POST'])
 def basedatos():
-    hoy = datetime.today().strftime('%Y-%m-%d')
-    fecha = request.form.get('fecha', hoy)
-    enlaces = Enlace.query.filter_by(fecha=fecha).all()
+    enlaces = []
+    fecha = datetime.today().strftime('%Y-%m-%d')
+    if request.method == 'POST':
+        if 'filtrar' in request.form:
+            fecha = request.form['fecha']
+            enlaces = Enlace.query.filter_by(fecha=fecha).all()
+        elif 'ver_todos' in request.form:
+            enlaces = Enlace.query.order_by(Enlace.fecha.desc()).all()
+        elif 'descargar' in request.form:
+            fecha = request.form['fecha']
+            enlaces = Enlace.query.filter_by(fecha=fecha).all()
+            return exportar_excel(enlaces, f"enlaces_filtrados_{fecha}.xlsx")
+        elif 'descargar_todo' in request.form:
+            enlaces = Enlace.query.all()
+            return exportar_excel(enlaces, "enlaces_todos.xlsx")
+        elif 'borrar' in request.form:
+            if request.form.get("password") == "1234":
+                Enlace.query.delete()
+                db.session.commit()
+                flash("Base de datos borrada correctamente", "success")
+            else:
+                flash("Contraseña incorrecta", "danger")
+        elif 'eliminar_duplicados' in request.form:
+            enlaces = Enlace.query.order_by(Enlace.fecha, Enlace.enlace).all()
+            vistos = set()
+            for e in enlaces:
+                clave = (e.fecha, e.enlace)
+                if clave in vistos:
+                    db.session.delete(e)
+                else:
+                    vistos.add(clave)
+            db.session.commit()
     return render_template('basedatos.html', enlaces=enlaces, fecha=fecha)
 
-@app.route('/descargar_filtrados', methods=['POST'])
-def descargar_filtrados():
-    fecha = request.form.get('fecha')
-    enlaces = Enlace.query.filter_by(fecha=fecha).all()
-    df = pd.DataFrame([(e.fecha, e.remitente, e.enlace, e.identificador) for e in enlaces],
-                      columns=['Fecha', 'Remitente', 'Enlace', 'Identificador'])
-    nombre_archivo = f"clipping_{fecha}.xlsx"
-    df.to_excel(nombre_archivo, index=False)
-    return send_file(nombre_archivo, as_attachment=True)
-
-@app.route('/descargar_todo')
-def descargar_todo():
-    enlaces = Enlace.query.all()
-    df = pd.DataFrame([(e.fecha, e.remitente, e.enlace, e.identificador) for e in enlaces],
-                      columns=['Fecha', 'Remitente', 'Enlace', 'Identificador'])
-    df.to_excel("todos_los_enlaces.xlsx", index=False)
-    return send_file("todos_los_enlaces.xlsx", as_attachment=True)
-
-@app.route('/eliminar_duplicados')
-def eliminar_duplicados():
-    vistos = set()
-    duplicados = []
-    for e in Enlace.query.order_by(Enlace.fecha, Enlace.enlace).all():
-        clave = (e.fecha, e.enlace)
-        if clave in vistos:
-            duplicados.append(e)
-        else:
-            vistos.add(clave)
-    for dup in duplicados:
-        db.session.delete(dup)
-    db.session.commit()
-    return redirect(url_for('basedatos'))
-
-@app.route('/clipping')
-def clipping():
-    hoy = datetime.today().strftime('%Y-%m-%d')
-    enlaces = Enlace.query.filter_by(fecha=hoy).all()
-    enlaces_unicos = list({e.enlace: e for e in enlaces}.values())
-    random.shuffle(enlaces_unicos)
-    grupos = [[], [], []]
-    for i, enlace in enumerate(enlaces_unicos):
-        grupos[i % 3].append(enlace)
-
-    miembros = Miembro.query.order_by(Miembro.nombre).all()
-    random.shuffle(miembros)
-    grupos_miembros = [miembros[i::3] for i in range(3)]
-    dia_semana = datetime.today().weekday()
-    es_viernes = dia_semana == 4
-
-    horarios = {}
-    for m in miembros:
-        horarios[m.nombre] = m.horario_v if es_viernes else m.horario_lj
-
-    return render_template('clipping.html', grupos=grupos, grupos_miembros=grupos_miembros, horarios=horarios)
+def exportar_excel(enlaces, nombre_archivo):
+    datos = [{'Nombre': e.nombre, 'Fecha': e.fecha, 'Enlace': e.enlace, 'Identificador': e.identificador} for e in enlaces]
+    df = pd.DataFrame(datos)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return send_file(output, download_name=nombre_archivo, as_attachment=True)
 
 @app.route('/equipo', methods=['GET', 'POST'])
 def equipo():
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        horario_lj = request.form['horario_lj']
-        horario_v = request.form['horario_v']
-        equipo = request.form['equipo']
-        miembro = Miembro.query.filter_by(nombre=nombre).first()
-        if not miembro:
-            nuevo = Miembro(nombre=nombre, horario_lj=horario_lj, horario_v=horario_v, equipo=equipo)
+        if 'añadir' in request.form:
+            nuevo = Miembro(
+                nombre=request.form['nombre'],
+                equipo=request.form['equipo'],
+                horario_lj=request.form['horario_lj'],
+                horario_v=request.form['horario_v']
+            )
             db.session.add(nuevo)
-        else:
-            miembro.horario_lj = horario_lj
-            miembro.horario_v = horario_v
-            miembro.equipo = equipo
-        db.session.commit()
-    miembros = Miembro.query.order_by(Miembro.nombre).all()
+            db.session.commit()
+        elif 'eliminar' in request.form:
+            id_borrar = request.form.get('id_borrar')
+            Miembro.query.filter_by(id=id_borrar).delete()
+            db.session.commit()
+    miembros = Miembro.query.all()
     return render_template('equipo.html', miembros=miembros)
 
-@app.route('/limpiar', methods=['POST'])
-def limpiar():
-    password = request.form['password']
-    if password == '1234':
-        db.session.query(Enlace).delete()
-        db.session.commit()
-        flash("Base de datos limpiada", "success")
-    else:
-        flash("Contraseña incorrecta", "error")
-    return redirect(url_for('basedatos'))
+@app.route('/clipping', methods=['GET', 'POST'])
+def clipping():
+    hoy = datetime.today().strftime('%Y-%m-%d')
+    fecha = request.form.get("fecha", hoy)
+    enlaces = Enlace.query.filter_by(fecha=fecha).all()
+    enlaces_filtrados = list({e.enlace for e in enlaces})
+    random.shuffle(enlaces_filtrados)
+    grupos = [[], [], []]
+    for idx, enlace in enumerate(enlaces_filtrados):
+        grupos[idx % 3].append(enlace)
+
+    miembros = Miembro.query.all()
+    random.shuffle(miembros)
+    equipos = [[], [], []]
+    for idx, m in enumerate(miembros):
+        equipos[idx % 3].append(m)
+
+    dia_semana = datetime.strptime(fecha, "%Y-%m-%d").weekday()
+    es_viernes = dia_semana == 4
+    return render_template('clipping.html', grupos=grupos, equipos=equipos, fecha=fecha, es_viernes=es_viernes)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True)

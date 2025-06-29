@@ -1,56 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}Recolector de Enlaces{% endblock %}</title>
+    <meta charset="utf-8">
+    <title>{% block title %}{% endblock %}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 30px;
-            background-color: #f4f4f4;
+            margin: 40px;
+            background-color: #f2f2f2;
         }
-        h1 {
-            color: #333;
-        }
-        a.button, button {
-            display: inline-block;
-            padding: 8px 12px;
+        a, button {
             margin: 5px;
-            background-color: #007BFF;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
         }
-        a.button:hover, button:hover {
-            background-color: #0056b3;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
+        .botones {
             margin-top: 20px;
-            background: white;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #eee;
-        }
-        form {
-            margin-bottom: 20px;
-        }
-        input[type="text"], input[type="date"], select {
-            padding: 6px;
-            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    {% block content %}
-    {% endblock %}
+    <h1>{% block header %}{% endblock %}</h1>
+    {% block content %}{% endblock %}
+    <div class="botones">
+        <a href="/" style="display:inline-block"><button>Volver al inicio</button></a>
+    </div>
 </body>
 </html>
