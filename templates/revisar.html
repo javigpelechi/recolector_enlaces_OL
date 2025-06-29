@@ -1,38 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Revisión de enlaces</title>
-  <style>
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f2f2f2; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Revisión de enlaces</title>
 </head>
 <body>
-  <h1>Enlaces enviados hoy</h1>
-  {% if datos %}
-    <table>
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Hora</th>
-          <th>Nombre</th>
-          <th>Enlace</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for enlace in datos %}
-          <tr>
-            <td>{{ enlace.fecha }}</td>
-            <td>{{ enlace.hora }}</td>
-            <td>{{ enlace.nombre }}</td>
-            <td><a href="{{ enlace.enlace }}" target="_blank">{{ enlace.enlace }}</a></td>
-          </tr>
-        {% endfor %}
-      </tbody>
+    <h1>Base de datos de enlaces</h1>
+
+    <form method="POST">
+        <label for="fecha">Filtrar por fecha:</label>
+        <input type="date" name="fecha" value="{{ fecha }}">
+        <button type="submit">Filtrar</button>
+    </form>
+
+    <form action="/descargar_filtrados" method="POST" style="display:inline;">
+        <input type="hidden" name="fecha" value="{{ fecha }}">
+        <button type="submit">Descargar filtrados (Excel)</button>
+    </form>
+
+    <form action="/descargar_todo" method="GET" style="display:inline;">
+        <button type="submit">Descargar todo (Excel)</button>
+    </form>
+
+    <form action="/eliminar_duplicados" method="GET" style="display:inline;">
+        <button type="submit">Eliminar duplicados</button>
+    </form>
+
+    <br><br>
+    <table border="1" cellpadding="6">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Enlace</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in enlaces %}
+            <tr>
+                <td>{{ e.nombre }}</td>
+                <td><a href="{{ e.enlace }}" target="_blank">{{ e.enlace }}</a></td>
+                <td>{{ e.fecha }}</td>
+                <td>{{ e.hora }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-  {% else %}
-    <p>No hay enlaces aún para hoy.</p>
-  {% endif %}
 </body>
 </html>

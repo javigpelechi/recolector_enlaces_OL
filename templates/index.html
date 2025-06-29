@@ -1,56 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Recolección de Enlaces</title>
+    <meta charset="UTF-8">
+    <title>Enviar enlaces</title>
 </head>
 <body>
-  <h1>Enviar enlaces de noticias</h1>
+    <h1>Enviar enlaces</h1>
 
-  <label for="nombre">Selecciona tu nombre:</label><br>
-  <select id="nombre">
-    <option value="">-- Elige tu nombre --</option>
-    <option>Alicia</option>
-    <option>Carmen</option>
-    <option>Ceci</option>
-    <option>Alvaro</option>
-    <option>Kiko</option>
-    <option>Iván</option>
-    <option>Nico</option>
-    <option>Javier</option>
-    <option>Lucía</option>
-    <option>Iñigo</option>
-    <option>Manolo</option>
-    <option>Raquel</option>
-  </select><br><br>
+    <form action="/enviar" method="POST">
+        <label for="nombre">Tu nombre:</label>
+        <select name="nombre" required>
+            {% for nombre in nombres %}
+            <option value="{{ nombre }}">{{ nombre }}</option>
+            {% endfor %}
+        </select><br><br>
 
-  <label for="enlace">Pega uno o más enlaces (uno por línea):</label><br>
-  <textarea id="enlace" rows="10" cols="80" placeholder="https://ejemplo.com/noticia1&#10;https://ejemplo.com/noticia2"></textarea><br><br>
+        <label for="fecha">Fecha:</label>
+        <input type="date" name="fecha" value="{{ hoy }}" required><br><br>
 
-  <button onclick="enviar()">Enviar</button>
+        <label for="enlace">Enlaces:</label><br>
+        {% for i in range(30) %}
+        <input type="text" name="enlace" style="width: 90%;"><br>
+        {% endfor %}
 
-  <script>
-    function enviar() {
-      const nombre = document.getElementById('nombre').value;
-      const texto = document.getElementById('enlace').value;
+        <br><button type="submit">Enviar</button>
+    </form>
 
-      if (!nombre || !texto.trim()) {
-        alert("Por favor selecciona tu nombre y añade al menos un enlace.");
-        return;
-      }
+    <br><hr><br>
 
-      const enlaces = texto.split('\n').map(e => e.trim()).filter(e => e);
-
-      fetch('/enviar', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nombre, enlaces })
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert("¡Enlaces enviados!");
-        document.getElementById('enlace').value = "";
-      });
-    }
-  </script>
+    <form action="/revisar" method="GET">
+        <button type="submit">Acceder a base de datos</button>
+    </form>
 </body>
 </html>
