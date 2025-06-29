@@ -1,20 +1,28 @@
 <!DOCTYPE html>
-<html>
-<head><title>Enviar enlaces</title></head>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Enviar enlaces</title>
+</head>
 <body>
-    <h2>Enviar enlaces</h2>
-    <form method="POST">
-        Fecha: <input type="date" name="fecha" value="{{ fecha }}"><br>
-        Autor:
-        <select name="autor">
+    <h1>Enviar enlaces</h1>
+    <form action="/guardar" method="POST">
+        <label for="nombre">Nombre:</label>
+        <select name="nombre" required>
             {% for miembro in miembros %}
                 <option value="{{ miembro.nombre }}">{{ miembro.nombre }}</option>
             {% endfor %}
-        </select><br>
-        <textarea name="enlaces" rows="10" cols="80"></textarea><br>
-        <button type="submit">Enviar</button>
+        </select><br><br>
+
+        <label for="fecha">Fecha:</label>
+        <input type="date" name="fecha" value="{{ fecha_hoy }}" required><br><br>
+
+        <label for="enlaces">Enlaces (uno por línea):</label><br>
+        <textarea name="enlaces" rows="10" cols="60" required></textarea><br><br>
+
+        <input type="submit" value="Guardar enlaces">
     </form>
     <br>
-    <a href="/">Volver al inicio</a>
+    <a href="/">Volver a inicio</a>
 </body>
 </html>

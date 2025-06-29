@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clipping</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Clipping generado</h1>
+
+    {% for grupo, miembros in asignaciones.items() %}
+        <h2>Grupo {{ grupo }}</h2>
+        <table border="1">
+            <tr>
+                <th>Nombre</th>
+                <th>Horario</th>
+            </tr>
+            {% for persona in miembros %}
+            <tr>
+                <td>{{ persona['nombre'] }}</td>
+                <td>{{ persona['horario'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <h3>Enlaces asignados:</h3>
+        <ul>
+            {% for enlace in enlaces[grupo] %}
+            <li>{{ enlace }}</li>
+            {% endfor %}
+        </ul>
+        <hr>
+    {% endfor %}
+
+    <br>
+    <a href="/">Volver al inicio</a>
+</body>
+</html>

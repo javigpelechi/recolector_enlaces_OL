@@ -2,29 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Recolector de Enlaces</title>
+    <title>Página principal</title>
 </head>
 <body>
-    <h1>Enviar Enlaces</h1>
-
-    <form action="/enviar" method="post">
-        <label>Fecha:</label>
-        <input type="date" name="fecha" value="{{ hoy }}"><br><br>
-
-        <label>Nombre:</label>
-        <select name="nombre">
-            {% for nombre in nombres %}
-            <option value="{{ nombre }}">{{ nombre }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <label>Enlaces (uno por línea):</label><br>
-        <textarea name="enlaces" rows="15" cols="80" placeholder="Pega aquí todos los enlaces, uno por línea..."></textarea><br><br>
-
-        <input type="submit" value="Enviar">
-    </form>
-
-    <br>
-    <a href="/basedatos"><button>Acceder a base de datos</button></a>
+    <h1>Recolector de enlaces</h1>
+    <ul>
+        <li><a href="/enviar">Enviar enlaces</a></li>
+        <li><a href="/basedatos">Base de datos</a></li>
+        <li><a href="/equipo">Gestión de equipo</a></li>
+        <li><a href="/clipping">Clippings</a></li>
+    </ul>
 </body>
 </html>

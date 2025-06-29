@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestión de Equipo</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Gestión de Equipo</h1>
+    <form action="/equipo" method="post">
+        <table border="1">
+            <tr>
+                <th>Nombre</th>
+                <th>Equipo</th>
+                <th>Horario L-J</th>
+                <th>Horario V</th>
+            </tr>
+            {% for miembro in equipo %}
+            <tr>
+                <td><input type="text" name="nombre_{{ loop.index0 }}" value="{{ miembro.nombre }}"></td>
+                <td><input type="text" name="equipo_{{ loop.index0 }}" value="{{ miembro.equipo }}"></td>
+                <td><input type="text" name="horario_lj_{{ loop.index0 }}" value="{{ miembro.horario_lj }}"></td>
+                <td><input type="text" name="horario_v_{{ loop.index0 }}" value="{{ miembro.horario_v }}"></td>
+            </tr>
+            {% endfor %}
+        </table>
+        <input type="hidden" name="total_filas" value="{{ equipo|length }}">
+        <button type="submit">Guardar Cambios</button>
+    </form>
+
+    <form action="/añadir_miembro" method="post" style="margin-top: 20px;">
+        <h3>Añadir nuevo miembro</h3>
+        <input type="text" name="nuevo_nombre" placeholder="Nombre" required>
+        <input type="text" name="nuevo_equipo" placeholder="Equipo" required>
+        <input type="text" name="nuevo_horario_lj" placeholder="Horario L-J" required>
+        <input type="text" name="nuevo_horario_v" placeholder="Horario V" required>
+        <button type="submit">Añadir</button>
+    </form>
+
+    <form action="/eliminar_miembro" method="post" style="margin-top: 20px;">
+        <h3>Eliminar miembro</h3>
+        <input type="text" name="nombre_eliminar" placeholder="Nombre exacto" required>
+        <button type="submit">Eliminar</button>
+    </form>
+
+    <br>
+    <a href="/">Volver al inicio</a>
+</body>
+</html>
