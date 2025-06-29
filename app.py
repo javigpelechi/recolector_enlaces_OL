@@ -23,18 +23,16 @@ def init_db():
 @app.route('/')
 def index():
     hoy = date.today().strftime("%Y-%m-%d")
-    nombres = [
-        "Alicia","Carmen","Ceci","Alvaro","Kiko",
-        "Iván","Nico","Javier","Lucía","Iñigo","Manolo","Raquel"
-    ]
+    nombres = ["Alicia","Carmen","Ceci","Alvaro","Kiko",
+               "Iván","Nico","Javier","Lucía","Iñigo","Manolo","Raquel"]
     return render_template("index.html", hoy=hoy, nombres=nombres)
 
 @app.route('/enviar', methods=['POST'])
 def enviar():
-    fecha = request.form.get("fecha")
-    nombre = request.form.get("nombre")
+    fecha = request.form["fecha"]
+    nombre = request.form["nombre"]
     hora = datetime.now().strftime("%H:%M")
-    texto = request.form.get("enlaces", "")
+    texto = request.form.get("enlaces","")
     enlaces = [e.strip() for e in texto.split('\n') if e.strip()]
 
     for url in enlaces:
@@ -44,8 +42,15 @@ def enviar():
 
 @app.route('/basedatos', methods=['GET'])
 def basedatos():
-    fecha = request.args.get("fecha") or date.today().strftime("%Y-%m-%d")
-    datos = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora).all()
+    # Si ?all=true, mostramos todos
+    if request.args.get("all") == "true":
+        datos = Enlace.query.order_by(Enlace.fecha.desc(), Enlace.hora.desc()).all()
+        fecha = None
+    else:
+        # Filtrar por fecha o, si no viene, por hoy
+        fecha = request.args.get("fecha") or date.today().strftime("%Y-%m-%d")
+        datos = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora.asc()).all()
+
     return render_template("basedatos.html", datos=datos, fecha=fecha)
 
 @app.route('/descargar_filtrados', methods=['GET'])
@@ -56,7 +61,7 @@ def descargar_filtrados():
 
 @app.route('/descargar_todos', methods=['GET'])
 def descargar_todos():
-    registros = Enlace.query.order_by(Enlace.fecha, Enlace.hora).all()
+    registros = Enlace.query.order_by(Enlace.fecha.desc(), Enlace.hora.desc()).all()
     return _generar_excel(registros, "enlaces_completos.xlsx")
 
 def _generar_excel(registros, filename):
@@ -102,8 +107,4 @@ def eliminar_duplicados():
 
 if __name__ == "__main__":
     init_db()
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000)),
-        debug=True
-    )
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)

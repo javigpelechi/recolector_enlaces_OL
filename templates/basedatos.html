@@ -1,47 +1,62 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>Base de datos de enlaces</title>
 </head>
 <body>
   <h1>Base de datos de enlaces</h1>
 
-  <form method="GET" action="/basedatos">
+  <!-- Filtro por fecha -->
+  <form method="GET" action="/basedatos" style="display:inline;">
     <label for="fecha">Filtrar por fecha:</label>
-    <input type="date" id="fecha" name="fecha" value="{{ fecha }}">
+    <input type="date" id="fecha" name="fecha" value="{{ fecha or '' }}">
     <button type="submit">Filtrar</button>
   </form>
 
-  <form method="GET" action="/descargar_filtrados">
-    <input type="hidden" name="fecha" value="{{ fecha }}">
+  <!-- Ver todos -->
+  <form method="GET" action="/basedatos" style="display:inline;">
+    <input type="hidden" name="all" value="true">
+    <button type="submit">Ver todos</button>
+  </form>
+
+  <!-- Descargas -->
+  <form method="GET" action="/descargar_filtrados" style="display:inline;">
+    <input type="hidden" name="fecha" value="{{ fecha or '' }}">
     <button type="submit">Descargar filtrados</button>
   </form>
 
-  <form method="GET" action="/descargar_todos">
+  <form method="GET" action="/descargar_todos" style="display:inline;">
     <button type="submit">Descargar todo</button>
   </form>
 
-  <form method="POST" action="/eliminar_duplicados">
+  <!-- Eliminar duplicados -->
+  <form method="POST" action="/eliminar_duplicados" style="display:inline;">
     <button type="submit">Eliminar duplicados</button>
   </form>
 
-  <br>
-  <table border="1">
-    <tr>
-      <th>Fecha</th>
-      <th>Hora</th>
-      <th>Nombre</th>
-      <th>Enlace</th>
-    </tr>
-    {% for dato in datos %}
+  <br><br>
+  <table border="1" cellpadding="5">
+    <thead>
       <tr>
-        <td>{{ dato.fecha }}</td>
-        <td>{{ dato.hora }}</td>
-        <td>{{ dato.nombre }}</td>
-        <td><a href="{{ dato.enlace }}" target="_blank">{{ dato.enlace }}</a></td>
+        <th>Fecha</th>
+        <th>Hora</th>
+        <th>Nombre</th>
+        <th>Enlace</th>
       </tr>
-    {% endfor %}
+    </thead>
+    <tbody>
+      {% for d in datos %}
+      <tr>
+        <td>{{ d.fecha }}</td>
+        <td>{{ d.hora }}</td>
+        <td>{{ d.nombre }}</td>
+        <td><a href="{{ d.enlace }}" target="_blank">{{ d.enlace }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
   </table>
+
+  <br><a href="/"><button>Volver</button></a>
 </body>
 </html>
