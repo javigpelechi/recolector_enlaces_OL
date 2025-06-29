@@ -7,6 +7,9 @@ import pandas as pd
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Necesario para flash/message, si decides usarlo
+app.secret_key = os.environ.get("SECRET_KEY", "un-secretillo")
+
 db = SQLAlchemy(app)
 
 class Enlace(db.Model):
@@ -42,16 +45,37 @@ def enviar():
 
 @app.route('/basedatos', methods=['GET'])
 def basedatos():
-    # Si ?all=true, mostramos todos
-    if request.args.get("all") == "true":
-        datos = Enlace.query.order_by(Enlace.fecha.desc(), Enlace.hora.desc()).all()
+    # Filtrado por fecha o todos
+    all_flag = request.args.get("all") == "true"
+    if all_flag:
+        registros = Enlace.query.order_by(Enlace.fecha.desc(), Enlace.hora.desc()).all()
         fecha = None
     else:
-        # Filtrar por fecha o, si no viene, por hoy
         fecha = request.args.get("fecha") or date.today().strftime("%Y-%m-%d")
-        datos = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora.asc()).all()
+        registros = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora.asc()).all()
 
-    return render_template("basedatos.html", datos=datos, fecha=fecha)
+    # Generar lista con identificadores
+    datos = []
+    # Si filtramos por fecha, solo esas; si no, agrupamos por fecha
+    if all_flag:
+        # agrupar por fecha y resetear contador por grupo
+        from itertools import groupby
+        for f, group in groupby(registros, key=lambda e: e.fecha):
+            for i, r in enumerate(group, start=1):
+                yyyy,mm,dd = f.split('-')
+                ident = f"{dd}_{mm}_{yyyy[2:]}_{i:02d}"
+                datos.append((r, ident))
+    else:
+        # solo una fecha
+        for i, r in enumerate(registros, start=1):
+            yyyy,mm,dd = r.fecha.split('-')
+            ident = f"{dd}_{mm}_{yyyy[2:]}_{i:02d}"
+            datos.append((r, ident))
+
+    return render_template("basedatos.html",
+                           datos=datos,
+                           fecha=fecha,
+                           all_flag=all_flag)
 
 @app.route('/descargar_filtrados', methods=['GET'])
 def descargar_filtrados():
@@ -66,11 +90,15 @@ def descargar_todos():
 
 def _generar_excel(registros, filename):
     data = [{
-        "Nombre": r.nombre,
-        "Enlace": r.enlace,
-        "Fecha": r.fecha,
-        "Hora": r.hora
-    } for r in registros]
+        "ID":        ident,
+        "Fecha":     r.fecha,
+        "Hora":      r.hora,
+        "Nombre":    r.nombre,
+        "Enlace":    r.enlace
+    } for r, ident in [
+        *((r, f"{r.fecha.split('-')[2]}_{r.fecha.split('-')[1]}_{r.fecha.split('-')[0][2:]}_{i:02d}")
+          for i, r in enumerate(registros, start=1))
+    ]]
 
     df = pd.DataFrame(data)
     output = io.BytesIO()
@@ -102,9 +130,21 @@ def eliminar_duplicados():
     for dup in duplicados:
         db.session.delete(dup)
     db.session.commit()
+    return redirect(url_for("basedatos"))
 
+@app.route('/limpiar_base', methods=['POST'])
+def limpiar_base():
+    passwd = request.form.get("password", "")
+    if passwd != "1234":
+        return "Contraseña incorrecta. <a href='/basedatos'>Volver</a>", 403
+    Enlace.query.delete()
+    db.session.commit()
     return redirect(url_for("basedatos"))
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000)),
+        debug=True
+    )

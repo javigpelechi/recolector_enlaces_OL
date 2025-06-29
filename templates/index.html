@@ -8,25 +8,23 @@
     <h1>Enviar Enlaces</h1>
 
     <form action="/enviar" method="post">
-        <label for="fecha">Fecha:</label>
-        <input type="date" id="fecha" name="fecha" value="{{ fecha_hoy }}"><br><br>
+        <label>Fecha:</label>
+        <input type="date" name="fecha" value="{{ hoy }}"><br><br>
 
-        <label for="nombre">Nombre:</label>
-        <select id="nombre" name="nombre">
+        <label>Nombre:</label>
+        <select name="nombre">
             {% for nombre in nombres %}
-                <option value="{{ nombre }}">{{ nombre }}</option>
+            <option value="{{ nombre }}">{{ nombre }}</option>
             {% endfor %}
         </select><br><br>
 
-        <label for="enlaces">Enlaces (uno por línea):</label><br>
+        <label>Enlaces (uno por línea):</label><br>
         <textarea name="enlaces" rows="15" cols="80" placeholder="Pega aquí todos los enlaces, uno por línea..."></textarea><br><br>
 
         <input type="submit" value="Enviar">
     </form>
 
     <br>
-    <form action="/basedatos" method="get">
-        <button type="submit">Acceder a base de datos</button>
-    </form>
+    <a href="/basedatos"><button>Acceder a base de datos</button></a>
 </body>
 </html>

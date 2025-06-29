@@ -7,30 +7,40 @@
 <body>
   <h1>Base de datos de enlaces</h1>
 
-  <!-- Filtro por fecha -->
+  <!-- Admin: limpiar base -->
+  <button id="btn_limpia">Limpiar base de datos (solo admin)</button>
+  <div id="admin_form" style="display:none; margin-top:10px;">
+    <form method="POST" action="/limpiar_base">
+      <label>Contraseña:</label>
+      <input type="password" name="password" required>
+      <button type="submit">Confirmar borrado</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('btn_limpia').addEventListener('click', () => {
+      const f = document.getElementById('admin_form');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    });
+  </script>
+
+  <!-- Filtro y descargas -->
   <form method="GET" action="/basedatos" style="display:inline;">
-    <label for="fecha">Filtrar por fecha:</label>
-    <input type="date" id="fecha" name="fecha" value="{{ fecha or '' }}">
+    <label>Filtrar por fecha:</label>
+    <input type="date" name="fecha" value="{{ fecha or '' }}">
     <button type="submit">Filtrar</button>
   </form>
-
-  <!-- Ver todos -->
   <form method="GET" action="/basedatos" style="display:inline;">
     <input type="hidden" name="all" value="true">
     <button type="submit">Ver todos</button>
   </form>
-
-  <!-- Descargas -->
   <form method="GET" action="/descargar_filtrados" style="display:inline;">
     <input type="hidden" name="fecha" value="{{ fecha or '' }}">
     <button type="submit">Descargar filtrados</button>
   </form>
-
   <form method="GET" action="/descargar_todos" style="display:inline;">
     <button type="submit">Descargar todo</button>
   </form>
-
-  <!-- Eliminar duplicados -->
   <form method="POST" action="/eliminar_duplicados" style="display:inline;">
     <button type="submit">Eliminar duplicados</button>
   </form>
@@ -39,6 +49,7 @@
   <table border="1" cellpadding="5">
     <thead>
       <tr>
+        <th>ID</th>
         <th>Fecha</th>
         <th>Hora</th>
         <th>Nombre</th>
@@ -46,12 +57,13 @@
       </tr>
     </thead>
     <tbody>
-      {% for d in datos %}
+      {% for r, ident in datos %}
       <tr>
-        <td>{{ d.fecha }}</td>
-        <td>{{ d.hora }}</td>
-        <td>{{ d.nombre }}</td>
-        <td><a href="{{ d.enlace }}" target="_blank">{{ d.enlace }}</a></td>
+        <td>{{ ident }}</td>
+        <td>{{ r.fecha }}</td>
+        <td>{{ r.hora }}</td>
+        <td>{{ r.nombre }}</td>
+        <td><a href="{{ r.enlace }}" target="_blank">{{ r.enlace }}</a></td>
       </tr>
       {% endfor %}
     </tbody>
