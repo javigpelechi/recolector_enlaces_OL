@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Base de datos de enlaces</title>
+</head>
+<body>
+  <h1>Base de datos de enlaces</h1>
+
+  <form method="GET" action="/basedatos">
+    <label for="fecha">Filtrar por fecha:</label>
+    <input type="date" id="fecha" name="fecha" value="{{ fecha }}">
+    <button type="submit">Filtrar</button>
+  </form>
+
+  <form method="GET" action="/descargar_filtrados">
+    <input type="hidden" name="fecha" value="{{ fecha }}">
+    <button type="submit">Descargar filtrados</button>
+  </form>
+
+  <form method="GET" action="/descargar_todos">
+    <button type="submit">Descargar todo</button>
+  </form>
+
+  <form method="POST" action="/eliminar_duplicados">
+    <button type="submit">Eliminar duplicados</button>
+  </form>
+
+  <br>
+  <table border="1">
+    <tr>
+      <th>Fecha</th>
+      <th>Hora</th>
+      <th>Nombre</th>
+      <th>Enlace</th>
+    </tr>
+    {% for dato in datos %}
+      <tr>
+        <td>{{ dato.fecha }}</td>
+        <td>{{ dato.hora }}</td>
+        <td>{{ dato.nombre }}</td>
+        <td><a href="{{ dato.enlace }}" target="_blank">{{ dato.enlace }}</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
