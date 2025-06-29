@@ -1,17 +1,17 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, Response
 from flask_sqlalchemy import SQLAlchemy
 import os
 from datetime import datetime
+import csv
+import io
 
 app = Flask(__name__)
 
-# Configurar la base de datos desde la variable de entorno DATABASE_URL
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 
-# Modelo de datos
+# Modelo
 class Enlace(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False)
@@ -19,13 +19,14 @@ class Enlace(db.Model):
     fecha = db.Column(db.String(20), nullable=False)
     hora = db.Column(db.String(10), nullable=False)
 
-# Ruta principal con formulario
+# Formulario con fecha actual predefinida
 @app.route('/', methods=['GET'])
 def index():
     nombres = [
         'Alicia', 'Carmen', 'Ceci', 'Alvaro', 'Kiko',
         'Iván', 'Nico', 'Javier', 'Lucía', 'Iñigo', 'Manolo', 'Raquel'
     ]
+    hoy = datetime.now().strftime("%Y-%m-%d")
     html = """
     <h2>Enviar enlaces</h2>
     <form method="POST" action="/enviar">
@@ -36,15 +37,15 @@ def index():
             {% endfor %}
         </select><br><br>
         <label>Fecha (AAAA-MM-DD):</label>
-        <input type="date" name="fecha" required><br><br>
+        <input type="date" name="fecha" value="{{ hoy }}" required><br><br>
         <label>Enlaces (uno por línea):</label><br>
         <textarea name="enlaces" rows="10" cols="60" required></textarea><br><br>
         <input type="submit" value="Enviar">
     </form>
     """
-    return render_template_string(html, nombres=nombres)
+    return render_template_string(html, nombres=nombres, hoy=hoy)
 
-# Ruta para recibir datos del formulario
+# Procesar envío
 @app.route('/enviar', methods=['POST'])
 def enviar():
     nombre = request.form['nombre']
@@ -60,7 +61,7 @@ def enviar():
 
     return f"Se han enviado {len(enlaces)} enlace(s). <a href='/'>Volver</a>"
 
-# Ruta para revisar los datos guardados
+# Ver todos los registros
 @app.route('/revisar')
 def revisar():
     datos = Enlace.query.order_by(Enlace.fecha.desc(), Enlace.hora.desc()).all()
@@ -70,13 +71,38 @@ def revisar():
     html += "</ul><a href='/'>Volver</a>"
     return html
 
-# Comando para crear la base de datos
+# Descargar CSV por fecha
+@app.route('/descargar')
+def descargar():
+    fecha = request.args.get('fecha')
+    if not fecha:
+        return "Falta el parámetro ?fecha=AAAA-MM-DD", 400
+
+    registros = Enlace.query.filter_by(fecha=fecha).order_by(Enlace.hora).all()
+
+    if not registros:
+        return f"No hay registros para {fecha}", 404
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Nombre', 'Fecha', 'Hora', 'Enlace'])
+
+    for r in registros:
+        writer.writerow([r.nombre, r.fecha, r.hora, r.enlace])
+
+    output.seek(0)
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename=enlaces_{fecha}.csv"}
+    )
+
+# Inicializar base de datos al arrancar (una vez)
 def init_db():
     with app.app_context():
         db.create_all()
         print("Base de datos creada correctamente.")
 
-# Ejecutar el servidor y crear base de datos al arrancar
 if __name__ == "__main__":
     with app.app_context():
         try:
